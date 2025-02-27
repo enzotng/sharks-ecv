@@ -1,64 +1,76 @@
 import pandas as pd
+import itertools
+import time
+from joblib import Parallel, delayed
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import SelectKBest, f_classif
+from tqdm import tqdm
+from tqdm_joblib import tqdm_joblib
 
-df = pd.read_csv("sharks.csv")
-df.columns = df.columns.str.strip()
-df = df.loc[:, ~df.columns.duplicated()]
-df = df.loc[:, df.columns != '']
+data = pd.read_csv('sharks.csv')
+data.columns = data.columns.str.strip()
+data = data.loc[:, ~data.columns.duplicated()]
+data = data.loc[:, data.columns != '']
 
-df["Fatal (Y/N)"] = df["Fatal (Y/N)"].fillna(df["Fatal (Y/N)"].mode()[0]).astype(str).str.strip().str.upper()
-df = df[df["Fatal (Y/N)"].isin(["Y", "N"])]
-df.rename(columns={"Fatal (Y/N)": "fatal"}, inplace=True)
-df["fatal"] = df["fatal"].map({"Y": 1, "N": 0})
+data["Fatal (Y/N)"] = data["Fatal (Y/N)"].fillna(data["Fatal (Y/N)"].mode()[0]) \
+                                       .astype(str).str.strip().str.upper()
+data = data[data["Fatal (Y/N)"].isin(["Y", "N"])]
+data.rename(columns={"Fatal (Y/N)": "fatal"}, inplace=True)
+data["fatal"] = data["fatal"].map({"Y": 1, "N": 0})
 
-features = df.columns.drop("fatal")
-X = df[features]
-Y = df["fatal"]
+features = ["Age", "Activity", "Injury", "Type", "Country", "Area", "Species"]
 
-num_cols = X.select_dtypes(include=["int64", "float64"]).columns
-cat_cols = X.select_dtypes(include=["object"]).columns
+X_dict = {combo: pd.get_dummies(data[list(combo)], drop_first=True)
+          for r in range(1, len(features) + 1)
+          for combo in itertools.combinations(features, r)}
 
-imputer_num = SimpleImputer(strategy="median")
-imputer_cat = SimpleImputer(strategy="most_frequent")
-X[num_cols] = imputer_num.fit_transform(X[num_cols])
-X[cat_cols] = imputer_cat.fit_transform(X[cat_cols])
-X = pd.get_dummies(X, drop_first=True)
+n_estimators_list = [10, 50, 100]
+max_depth_list = [None, 5, 10, 20]
+random_states = list(range(10))
 
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.4, random_state=42)
+total_iterations = len(X_dict) * len(n_estimators_list) * len(max_depth_list) * len(random_states)
+print("Nombre total d'itérations :", total_iterations)
 
-n_estimators_list = [50, 100, 200]
-max_depth_list = [None, 5, 10]
-random_state_list = [0, 42]
+def evaluate(combo, n_estimators, max_depth, random_state):
+    X = X_dict[combo]
+    y = data["fatal"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_state)
+    model = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=random_state)
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    acc = accuracy_score(y_test, predictions)
+    return acc, combo, n_estimators, max_depth, random_state
 
-best_accuracy = 0
-best_config = None
-best_k = None
+if __name__ == '__main__':
+    sample_iterations = 10
+    sample_params = [(combo, n_estimators_list[0], max_depth_list[0], random_states[0])
+                     for combo in list(X_dict.keys())[:sample_iterations]]
+    
+    start_sample = time.time()
+    [evaluate(*params) for params in sample_params]
+    sample_time = time.time() - start_sample
+    avg_time = sample_time / sample_iterations
+    estimated_total_time = total_iterations * avg_time
+    print("Temps estimé pour l'exécution complète : {:.2f} secondes".format(estimated_total_time))
+    
+    start_full = time.time()
+    with tqdm_joblib(tqdm(total=total_iterations, desc="Évaluation")):
+        results = Parallel(n_jobs=-1)(
+            delayed(evaluate)(combo, n_estimators, max_depth, random_state)
+            for combo in X_dict.keys()
+            for n_estimators in n_estimators_list
+            for max_depth in max_depth_list
+            for random_state in random_states
+        )
+    elapsed_time = time.time() - start_full
 
-for k in range(1, X_train.shape[1] + 1):
-    selector = SelectKBest(score_func=f_classif, k=k)
-    X_train_sel = selector.fit_transform(X_train, y_train)
-    X_test_sel = selector.transform(X_test)
-    for n in n_estimators_list:
-        for d in max_depth_list:
-            for r in random_state_list:
-                clf = RandomForestClassifier(n_estimators=n, max_depth=d, random_state=r)
-                clf.fit(X_train_sel, y_train)
-                acc = accuracy_score(y_test, clf.predict(X_test_sel))
-                print(f"k: {k}, n_estimators: {n}, max_depth: {d}, random_state: {r} -> Accuracy: {acc * 100:.1f}%")
-                if acc > best_accuracy:
-                    best_accuracy = acc
-                    best_config = (n, d, r)
-                    best_k = k
+    best_result = max(results, key=lambda x: x[0])
+    best_accuracy, best_combo, best_n_estimators, best_max_depth, best_random_state = best_result
 
-selector = SelectKBest(score_func=f_classif, k=best_k)
-selector.fit(X_train, y_train)
-selected_features = X_train.columns[selector.get_support()]
-
-print("\nMeilleure configuration:")
-print(f"Nombre de features sélectionnées (k): {best_k}")
-print("Features sélectionnées :", list(selected_features))
-print(f"n_estimators: {best_config[0]}, max_depth: {best_config[1]}, random_state: {best_config[2]} -> Accuracy: {best_accuracy * 100:.1f}%")
+    print("Meilleure combinaison de features :", best_combo)
+    print("Meilleurs hyperparamètres : n_estimators =", best_n_estimators,
+          ", max_depth =", best_max_depth,
+          ", random_state =", best_random_state)
+    print("Meilleure accuracy obtenue : {:.1f}%".format(best_accuracy * 100))
+    print("Temps d'exécution réel : {:.2f} secondes".format(elapsed_time))
