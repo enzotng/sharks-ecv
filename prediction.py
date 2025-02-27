@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 from tqdm_joblib import tqdm_joblib
 
-data = pd.read_csv('sharks.csv')
+data = pd.read_csv('sharks_balanced_sample.csv')
 data.columns = data.columns.str.strip()
 data = data.loc[:, ~data.columns.duplicated()]
 data = data.loc[:, data.columns != '']
