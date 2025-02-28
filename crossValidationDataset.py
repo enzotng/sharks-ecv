@@ -4,6 +4,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
+import numpy as np
 
 data = pd.read_csv("cleanedDataset.csv")
 data.columns = data.columns.str.strip()
@@ -17,7 +18,11 @@ data["fatal"] = data["fatal"].map({"Y": 1, "N": 0})
 features = ["Age", "Activity", "Injury", "Type", "Country", "Area", "Species", "Year", "Sex"]
 y = data["fatal"]
 x = data[features]
+
 X = pd.get_dummies(x, drop_first=True)
+
+X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
+
 X.columns = [str(col).replace('[', '').replace(']', '').replace('<', '').replace('>', '') for col in X.columns]
 
 models = {
@@ -25,7 +30,11 @@ models = {
     "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
     "SVM": SVC(kernel='linear', random_state=42),
     "Gradient Boosting": GradientBoostingClassifier(random_state=42),
-    "XGBoost": XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss')
+    "XGBoost": XGBClassifier(
+        random_state=42, 
+        use_label_encoder=False, 
+        eval_metric='logloss'
+    )
 }
 
 for name, model in models.items():

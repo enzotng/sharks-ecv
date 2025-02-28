@@ -142,4 +142,4 @@ Le script affiche directement l’accuracy pour différentes configurations, pui
 
 ---
 
-*Note : Vérifiez que toutes les dépendances (pandas, sklearn, seaborn, matplotlib, joblib, xgboost, etc.) sont installées dans votre environnement Python.*
+*Note : Vérifiez que toutes les dépendances (pandas, sklearn, seaborn, matplotlib, joblib, xgboost, etc.) sont installées dans votre environnement Python (**Commande à éxécuter** : pip install pandas scikit-learn seaborn matplotlib joblib xgboost tqdm tqdm_joblib)*
