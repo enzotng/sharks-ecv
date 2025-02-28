@@ -125,7 +125,7 @@ Le script affiche directement l’accuracy pour différentes configurations, pui
 
 * **sharks.csv** : Fichier source contenant les données brutes.
 * **cleanedDataset.csv** : Fichier nettoyé et équilibré généré par `cleaningDataset.py`.
-* **sharks_balanced_sample.csv** : Nom du dataset attendu par plusieurs scripts de prédiction (si vous utilisez `cleanedDataset.csv`, vous pouvez renommer le fichier ou adapter le code en conséquence).
+* **cleanedDataset.csv** : Nom du dataset attendu par plusieurs scripts de prédiction (si vous utilisez `cleanedDataset.csv`, vous pouvez renommer le fichier ou adapter le code en conséquence).
 * **list_coor_australia.csv** : Non utilisé explicitement dans les scripts ci-dessus, probablement un fichier contenant des coordonnées liées à certaines analyses cartographiques.
 
 ---
@@ -133,7 +133,7 @@ Le script affiche directement l’accuracy pour différentes configurations, pui
 ## Exécution du projet
 
 1. Exécuter d’abord **cleaningDataset.py** pour générer un dataset propre et équilibré (`cleanedDataset.csv`).
-2. Renommer le fichier de sortie en `sharks_balanced_sample.csv` si nécessaire ou modifier les scripts suivants pour pointer vers le bon nom de fichier.
+2. Renommer le fichier de sortie en `cleanedDataset.csv` si nécessaire ou modifier les scripts suivants pour pointer vers le bon nom de fichier.
 3. Tester différentes approches :
    * **crossValidationDataset.py** pour comparer plusieurs algorithmes via validation croisée.
    * **illustrationDataset.py** pour visualiser les résultats et observer l’importance des variables.

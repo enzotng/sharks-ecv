@@ -11,7 +11,7 @@ from tqdm_joblib import tqdm_joblib
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-data = pd.read_csv('sharks_balanced_sample.csv')
+data = pd.read_csv('cleanedDataset.csv')
 data.columns = data.columns.str.strip()
 data = data.loc[:, ~data.columns.duplicated()]
 data = data.loc[:, data.columns != '']

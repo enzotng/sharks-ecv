@@ -5,7 +5,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
-data = pd.read_csv("sharks_balanced_sample.csv")
+data = pd.read_csv("cleanedDataset.csv")
 data.columns = data.columns.str.strip()
 data = data.loc[:, ~data.columns.duplicated()]
 data = data.loc[:, data.columns != '']
